@@ -22,11 +22,16 @@ module Facebooker
             options.merge!(required_features.pop.symbolize_keys)
           end
 
-          init_string = "FB.Facebook.init('#{Facebooker.api_key}','/xd_receiver.html');"
+          if request.ssl?
+            init_string = "FB.Facebook.init('#{Facebooker.api_key}','/xd_receiver_ssl.html');"
+          else
+            init_string = "FB.Facebook.init('#{Facebooker.api_key}','/xd_receiver.html');"
+          end
           unless required_features.blank?
              init_string = <<-FBML
              #{case options[:js]
                when :jquery then "$(document).ready("
+               when :dojo then "dojo.addOnLoad("
                else "Element.observe(window,'load',"
                end} function() {
                 FB_RequireFeatures(#{required_features.to_json}, function() {
@@ -36,8 +41,14 @@ module Facebooker
               });
               FBML
           end
-          if block_given?
-            concat javascript_tag(init_string)
+
+          # block_is_within_action_view? is rails 2.1.x and has been
+          # deprecated.  rails >= 2.2.x uses block_called_from_erb?
+          block_tester = respond_to?(:block_is_within_action_view?) ?
+            :block_is_within_action_view? : :block_called_from_erb?
+
+          if block_given? && send(block_tester, proc)
+            concat(javascript_tag(init_string))
           else
             javascript_tag init_string
           end

@@ -56,15 +56,15 @@ module Facebooker
     #       fbml 'text'
     #       text fbml
     #     end
-    #     # This will render the profile in /users/profile.erb
+    #     # This will render the profile in /users/profile.fbml.erb
     #     #   it will set @user to user_to_update in the template
     #     #  The mobile profile will be rendered from the app/views/test_publisher/_mobile.erb
     #     #   template
     #     def profile_update(user_to_update,user_with_session_to_use)
     #       send_as :profile
     #       from user_with_session_to_use
-    #       to user_to_update
-    #       profile render(:action=>"/users/profile",:assigns=>{:user=>user_to_update})
+    #       recipients user_to_update
+    #       profile render(:file=>"users/profile.fbml.erb",:assigns=>{:user=>user_to_update})
     #       profile_action "A string"
     #       mobile_profile render(:partial=>"mobile",:assigns=>{:user=>user_to_update})
     #   end
@@ -74,7 +74,7 @@ module Facebooker
     #     def ref_update(user)
     #       send_as :ref
     #       from user
-    #       fbml render(:action=>"/users/profile",:assigns=>{:user=>user_to_update})
+    #       fbml render(:file=>"users/profile",:assigns=>{:user=>user_to_update})
     #       handle "a_ref_handle"
     #   end
     #
@@ -415,8 +415,11 @@ module Facebooker
 	          ActionController::Base.append_view_path(controller_root) 
 	          ActionController::Base.append_view_path(controller_root+"/..") 
 	        end
+          view_paths = ActionController::Base.view_paths
+        else
+          view_paths = [template_root, controller_root]
 	      end
-        returning ActionView::Base.new([template_root,controller_root], assigns, self) do |template|
+        returning ActionView::Base.new(view_paths, assigns, self) do |template|
           template.controller=self
           template.extend(self.class.master_helper_module)
           def template.request_comes_from_facebook?

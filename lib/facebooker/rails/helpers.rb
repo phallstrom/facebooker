@@ -24,6 +24,14 @@ module Facebooker
         end
       end
       
+      def fb_iframe(src, options = {})
+        content_tag "fb:iframe", '', options.merge({ :src => src })
+      end
+
+      def fb_swf(src, options = {})
+        tag "fb:swf", options.merge(:swfsrc => src)
+      end
+      
       def fb_dialog_title( title )
         content_tag "fb:dialog-title", title
       end
@@ -179,10 +187,10 @@ module Facebooker
       #     <fb:editor-button label="Save Poke"
       #    </fb:editor-buttonset>
       #  </fb:editor>
-     def facebook_form_for( record_or_name_or_array,*args, &proc)
+      def facebook_form_for( record_or_name_or_array,*args, &proc)
 
-       raise ArgumentError, "Missing block" unless block_given?
-       options = args.last.is_a?(Hash) ? args.pop : {}
+        raise ArgumentError, "Missing block" unless block_given?
+        options = args.last.is_a?(Hash) ? args.pop : {}
 
         case record_or_name_or_array
         when String, Symbol
@@ -222,8 +230,18 @@ module Facebooker
           fields_for( object_name,*(args << options), &proc)
           concat("</fb:editor>",proc.binding)
         end
-    end
+      end
       
+      # Render an fb:application-name tag
+      #
+      # This renders the current application name via fbml. See
+      # http://wiki.developers.facebook.com/index.php/Fb:application-name
+      # for a full description.
+      #
+      def fb_application_name(options={})
+        tag "fb:application-name", stringify_vals(options)
+      end
+
       # Render an fb:name tag for the given user
       # This renders the name of the user specified.  You can use this tag as both subject and object of 
       # a sentence.  <em> See </em> http://wiki.developers.facebook.com/index.php/Fb:name for full description.  
@@ -331,7 +349,8 @@ module Facebooker
       VALID_FB_SHARED_PHOTO_SIZES = [:thumb, :small, :normal, :square]
       VALID_FB_PHOTO_SIZES = VALID_FB_SHARED_PHOTO_SIZES      
       VALID_FB_PROFILE_PIC_SIZES = VALID_FB_SHARED_PHOTO_SIZES
-      VALID_PERMISSIONS=[:email, :offline_access, :status_update, :photo_upload, :create_listing, :create_event, :rsvp_event, :sms, :video_upload]
+      VALID_PERMISSIONS=[:email, :offline_access, :status_update, :photo_upload, :create_listing, :create_event, :rsvp_event, :sms, :video_upload, 
+                         :publish_stream, :read_stream]
       
       # Render an fb:tabs tag containing some number of fb:tab_item tags.
       # Example:
@@ -639,20 +658,22 @@ module Facebooker
       # 
       # You can prompt a user with the following permissions:
       #   * email
+      #   * read_stream
+      #   * publish_stream
       #   * offline_access
       #   * status_update
       #   * photo_upload
-      #   * video_upload
-      #   * create_listing
       #   * create_event
       #   * rsvp_event
       #   * sms
-      # 
+      #   * video_upload
+      #   * create_note
+      #   * share_item
       # Example:
       # <%= fb_prompt_permission('email', "Would you like to receive email from our application?" ) %>
       #
       # See http://wiki.developers.facebook.com/index.php/Fb:prompt-permission for 
-      # more details
+      # more details. Correct as of 7th June 2009.
       #
       def fb_prompt_permission(permission,message,callback=nil)
         raise(ArgumentError, "Unknown value for permission: #{permission}") unless VALID_PERMISSIONS.include?(permission.to_sym)
@@ -660,6 +681,19 @@ module Facebooker
         args[:next_fbjs]=callback unless callback.nil?
         content_tag("fb:prompt-permission",message,args)
       end
+      
+      # Renders a link to prompt for multiple permissions at once.
+      #
+      # Example:
+      # <%= fb_prompt_permissions(['email','offline_access','status_update'], 'Would you like to grant some permissions?')
+      def fb_prompt_permissions(permissions,message,callback=nil)
+        permissions.each do |p|
+          raise(ArgumentError, "Unknown value for permission: #{p}") unless VALID_PERMISSIONS.include?(p.to_sym)          
+        end
+        args={:perms=>permissions*','}
+        args[:next_fbjs]=callback unless callback.nil?
+        content_tag("fb:prompt-permission",message,args)        
+      end      
       
       # Renders an <fb:eventlink /> tag that displays the event name and links to the event's page. 
       def fb_eventlink(eid)
@@ -705,6 +739,57 @@ module Facebooker
         tag "fb:time",stringify_vals({:t => time.to_i}.merge(options))
       end
       
+      # Renders a fb:intl element
+      #
+      # Example:
+      # <%= fb_intl('Age', :desc => 'Label for the age form field', :delimiters => '[]') %>
+      #
+      # See http://wiki.developers.facebook.com/index.php/Fb:intl for
+      # more details
+      def fb_intl(text=nil, options={}, &proc)
+        raise ArgumentError, "Missing block or text" unless block_given? or text
+        content = block_given? ? capture(&proc) : text
+        content_tag("fb:intl", content, stringify_vals(options))
+      end
+
+      # Renders a fb:intl-token element
+      #
+      # Example:
+      # <%= fb_intl-token('number', 5) %>
+      #
+      # See http://wiki.developers.facebook.com/index.php/Fb:intl-token for
+      # more details
+      def fb_intl_token(name, text=nil, &proc)
+        raise ArgumentError, "Missing block or text" unless block_given? or text
+        content = block_given? ? capture(&proc) : text
+        content_tag("fb:intl-token", content, stringify_vals({:name => name}))
+      end
+
+      # Renders a fb:date element
+      #
+      # Example:
+      # <%= fb_date(Time.now, :format => 'verbose', :tz => 'America/New York') %>
+      #
+      # See http://wiki.developers.facebook.com/index.php/Fb:date for
+      # more details
+      def fb_date(time, options={})
+        tag "fb:date", stringify_vals({:t => time.to_i}.merge(options))
+      end
+
+      # Renders a fb:fbml-attribute element
+      #
+      # Example:
+      # <%= fb_fbml_attribute('title', Education) %>
+      #
+      # The options hash is passed to the fb:intl element that is generated inside this element
+      # and can have the keys available for the fb:intl element.
+      #
+      # See http://wiki.developers.facebook.com/index.php/Fb:fbml-attribute for
+      # more details
+      def fb_fbml_attribute(name, text, options={})
+        content_tag("fb:fbml-attribute", fb_intl(text, options), stringify_vals({:name => name}))
+      end
+
       protected
       
       def cast_to_facebook_id(object)

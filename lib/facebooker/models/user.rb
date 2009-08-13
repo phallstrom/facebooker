@@ -10,7 +10,7 @@ module Facebooker
       include Model
       attr_accessor :message, :time, :status_id
     end
-    FIELDS = [:status, :political, :pic_small, :name, :quotes, :is_app_user, :tv, :profile_update_time, :meeting_sex, :hs_info, :timezone, :relationship_status, :hometown_location, :about_me, :wall_count, :significant_other_id, :pic_big, :music, :uid, :work_history, :sex, :religion, :notes_count, :activities, :pic_square, :movies, :has_added_app, :education_history, :birthday, :first_name, :meeting_for, :last_name, :interests, :current_location, :pic, :books, :affiliations, :locale, :profile_url, :proxied_email, :email_hashes, :allowed_restrictions, :pic_with_logo, :pic_big_with_logo, :pic_small_with_logo, :pic_square_with_logo]
+    FIELDS = [:status, :political, :pic_small, :name, :quotes, :is_app_user, :tv, :profile_update_time, :meeting_sex, :hs_info, :timezone, :relationship_status, :hometown_location, :about_me, :wall_count, :significant_other_id, :pic_big, :music, :uid, :work_history, :sex, :religion, :notes_count, :activities, :pic_square, :movies, :has_added_app, :education_history, :birthday, :birthday_date, :first_name, :meeting_for, :last_name, :interests, :current_location, :pic, :books, :affiliations, :locale, :profile_url, :proxied_email, :email_hashes, :allowed_restrictions, :pic_with_logo, :pic_big_with_logo, :pic_small_with_logo, :pic_square_with_logo]
     STANDARD_FIELDS = [:uid, :first_name, :last_name, :name, :timezone, :birthday, :sex, :affiliations, :locale, :profile_url, :pic_square]
     populating_attr_accessor(*FIELDS)
     attr_reader :affiliations
@@ -127,10 +127,23 @@ module Facebooker
                     :uid        => self.id,
                     :target_id  => target.id,
                     :message    => options[:message],
-                    :attachment => options[:attachment],
-                    :action_links => options[:action_links]
+                    :attachment => Facebooker.json_encode(options[:attachment]),
+                    :action_links => Facebooker.json_encode(options[:action_links])
                    )
     end
+    
+    
+    ###
+    # Publish a comment on a post
+    #
+    # See: http://wiki.developers.facebook.com/index.php/Stream.addComment
+    #
+    # +post_id+ the post_id for the post that is being commented on
+    # +comment+ the text of the comment
+    def comment_on(post_id, comment)
+      @session.post('facebook.stream.addComment', {:post_id=>post_id, :comment=>comment})
+    end
+    
 
      def friend_lists
        @friend_lists ||= @session.post('facebook.friends.getLists').map do |hash|
@@ -350,6 +363,12 @@ module Facebooker
     def has_permission?(ext_perm) # ext_perm = email, offline_access, status_update, photo_upload, create_listing, create_event, rsvp_event, sms
       session.post('facebook.users.hasAppPermission',:ext_perm=>ext_perm) == "1"
     end    
+    
+    ##
+    # Convenience method to check multiple permissions at once
+    def has_permissions?(ext_perms)
+      ext_perms.all?{|p| has_permission?(p)}
+    end            
     
     ##
     # Convenience method to send email to the current user

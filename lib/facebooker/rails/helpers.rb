@@ -536,6 +536,19 @@ module Facebooker
        "<fb:title>#{title}</fb:title>"
       end
       
+      # Adds a header to the page
+      #
+      # +header+: Some header
+      # +options+: Options
+      #
+      # <em>See</em http://wiki.developers.facebook.com/index.php/Fb:header for more details
+      # Options are:
+      #   * icon
+      #   * decoration
+      def fb_header(header, options = {})
+        content_tag "fb:header", header, stringify_vals(options)
+      end
+      
       # Create a Google Analytics tag
       # 
       # +uacct+: Your Urchin/Google Analytics account ID.

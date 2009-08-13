@@ -622,6 +622,14 @@ class RailsHelperTest < Test::Unit::TestCase
     #use an asset path where the canvas path equals the hostname to make sure we handle that case right
     ActionController::Base.asset_host='http://facebook.host.com'
   end
+
+  def test_fb_header
+    assert_equal "<fb:header>header</fb:header>", @h.fb_header("header")
+  end
+  
+  def test_fb_header_with_options
+    assert_equal "<fb:header decoration=\"shorten\">header</fb:header>", @h.fb_header("header", :decoration => :shorten)
+  end
   
   def test_fb_profile_pic
     assert_equal "<fb:profile-pic uid=\"1234\"></fb:profile-pic>", @h.fb_profile_pic("1234")

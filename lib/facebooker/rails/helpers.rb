@@ -14,13 +14,15 @@ module Facebooker
 
       # Create an fb:dialog
       # id must be a unique name e.g. "my_dialog"
-      # cancel_button is true or false
-      def fb_dialog( id, cancel_button, &block )
+      # cancel_button is true or false (default is true)
+      def fb_dialog( id, cancel_button = true, &block )
         content = capture(&block)
+        options = {:id => id}
+        options[:cancel_button] = true if cancel_button
         if ignore_binding?
-          concat( content_tag("fb:dialog", content, {:id => id, :cancel_button => cancel_button}) )
+          concat( content_tag("fb:dialog", content, options) )
         else
-          concat( content_tag("fb:dialog", content, {:id => id, :cancel_button => cancel_button}), block.binding )
+          concat( content_tag("fb:dialog", content, options), block.binding )
         end
       end
       
@@ -114,16 +116,16 @@ module Facebooker
       #    If you select some friends, they will see this message.
       #    <%= fb_req_choice("They will get this button, too",new_poke_path) %>
       #  <% end %>
-      def fb_multi_friend_request(type,friend_selector_message,url,&block)
+      def fb_multi_friend_request(type,friend_selector_message,url,friend_selector_options = {},&block)
         content = capture(&block)
         if ignore_binding?
           concat(content_tag("fb:request-form",
-                              fb_multi_friend_selector(friend_selector_message) + token_tag,
+                              fb_multi_friend_selector(friend_selector_message, friend_selector_options) + token_tag,
                               {:action=>url,:method=>"post",:invite=>true,:type=>type,:content=>content}
                               ))
         else
           concat(content_tag("fb:request-form",
-                              fb_multi_friend_selector(friend_selector_message) + token_tag,
+                              fb_multi_friend_selector(friend_selector_message, friend_selector_options) + token_tag,
                               {:action=>url,:method=>"post",:invite=>true,:type=>type,:content=>content}
                               ),
                 block.binding)

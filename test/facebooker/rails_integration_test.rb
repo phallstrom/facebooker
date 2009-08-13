@@ -861,6 +861,14 @@ class RailsHelperTest < Test::Unit::TestCase
       (@h.fb_multi_friend_request("invite","ignored","action") {})
   end
   
+  def test_fb_multi_friend_request_with_options
+    @h.expects(:capture).returns("body")
+    @h.expects(:protect_against_forgery?).returns(false)
+    @h.expects(:fb_multi_friend_selector).returns("friend selector")
+    assert_equal "<fb:request-form action=\"action\" content=\"body\" invite=\"true\" method=\"post\" type=\"invite\">friend selector</fb:request-form>",
+      (@h.fb_multi_friend_request("invite","ignored","action", :email_invite => false) {})
+  end
+  
   def test_fb_multi_friend_request_with_protection_against_forgery
     @h.expects(:capture).returns("body")
     @h.expects(:protect_against_forgery?).returns(true)
@@ -874,10 +882,25 @@ class RailsHelperTest < Test::Unit::TestCase
   
   def test_fb_dialog
     @h.expects(:capture).returns("dialog content")
-    @h.fb_dialog( "my_dialog", "1" ) do
+    @h.fb_dialog( "my_dialog" ) do
     end
-    assert_equal '<fb:dialog cancel_button="1" id="my_dialog">dialog content</fb:dialog>', @h.output_buffer
+    assert_equal '<fb:dialog cancel_button="true" id="my_dialog">dialog content</fb:dialog>', @h.output_buffer
   end
+  
+  def test_fb_dialog_cancel_button_false
+    @h.expects(:capture).returns("dialog content")
+    @h.fb_dialog( "my_dialog", false ) do
+    end
+    assert_equal '<fb:dialog id="my_dialog">dialog content</fb:dialog>', @h.output_buffer
+  end
+
+  def test_fb_dialog_cancel_button_true
+    @h.expects(:capture).returns("dialog content")
+    @h.fb_dialog( "my_dialog", true ) do
+    end
+    assert_equal '<fb:dialog cancel_button="true" id="my_dialog">dialog content</fb:dialog>', @h.output_buffer
+  end
+
   def test_fb_dialog_title
     assert_equal '<fb:dialog-title>My Little Dialog</fb:dialog-title>', @h.fb_dialog_title("My Little Dialog")
   end
